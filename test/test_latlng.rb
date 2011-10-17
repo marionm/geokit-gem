@@ -1,4 +1,5 @@
 require 'test/unit'
+require 'rubygems'
 require 'lib/geokit'
 require 'mocha'
 
@@ -110,6 +111,11 @@ class LatLngTest < Test::Unit::TestCase #:nodoc: all
   
   def test_heading_between
     assert_in_delta 332, Geokit::LatLng.heading_between(@loc_a,@loc_e), 0.5
+  end
+
+  def test_headings_between
+    headings = Geokit::LatLng.headings_between(@loc_a, [@loc_e])
+    assert_in_delta 332, headings[@loc_e], 0.5
   end
 
   def test_heading_to

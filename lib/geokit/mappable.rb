@@ -69,6 +69,15 @@ module Geokit
         x=Math.cos(from_lat)*Math.sin(to_lat)-Math.sin(from_lat)*Math.cos(to_lat)*Math.cos(d_lng)
         heading=to_heading(Math.atan2(y,x))
       end
+
+      # Returns headings between a point and multiple others
+      def headings_between(from, to)
+        headings = {}
+        to.each do |location|
+          headings[location] = heading_between(from, location)
+        end
+        headings
+      end
   
       # Given a start point, distance, and heading (in degrees), provides
       # an endpoint. Returns a LatLng instance. Typically, the instance method
@@ -115,6 +124,56 @@ module Geokit
         return res if res.success?
         raise Geokit::Geocoders::GeocodeError      
       end
+
+      # Returns a clockwise-ordered subset of the locations that form a convex hull.
+      # The algorithm is similar in concept to the polygon method's, but the heading
+      # sorting logic is done for each added node rather than just the start point.
+      # Won't really deal with map edge cases, so be careful.
+      def convex_hull(locations)
+        locations = locations.dup
+        start = locations.delete(northernmost(locations))
+
+        vertices = [start]
+        current = nil
+        last_heading = 0
+        until locations.empty? do
+          headings = headings_between(current || start, locations)
+          locations << start unless current
+
+          # Force headings to be sorted in 'clockwise-closeness' order to the
+          # heading between the previous point and the current. This prevents
+          # any inner point from getting picked inappropriately.
+          headings.each do |location, heading|
+            headings[location] += 360 if heading < last_heading
+          end
+
+          headings = headings.to_a
+          headings.sort! { |a, b| a[1] <=> b[1] }
+
+          current = headings.first[0]
+          last_heading = headings.first[1]
+
+          break if current == start
+
+          vertices << current
+          locations.delete(current)
+        end
+
+        vertices
+      end
+
+      # Returns a clockwise ordering of the locations that will form a polygon.
+      # Won't really deal with map edge cases, so be careful.
+      def polygon(locations)
+        locations = locations.dup
+        start = locations.delete(northernmost(locations))
+
+        headings = headings_between(start, locations)
+        headings = headings.to_a
+        headings.sort! { |a, b| a[1] <=> b[1] }
+
+        [start] + headings.map { |v| v[0] }
+      end
     
       protected
     
@@ -157,6 +216,15 @@ module Geokit
           else miles_per_longitude_degree
         end
       end  
+
+      # Return the northern-most point from the list. Ties are won by a lower array index.
+      def northernmost(locations)
+        max = locations.first
+        locations[1..-1].each do |location|
+          max = location if location.lat > max.lat
+        end
+        max
+      end
     end
   
     # -----------------------------------------------------------------------------------------------
