@@ -1,3 +1,6 @@
+path = File.expand_path(File.dirname(__FILE__))
+$:.unshift path unless $:.include?(path)
+
 module Geokit
   VERSION = '1.6.0'
   # These defaults are used in Geokit::Mappable.distance_to and in acts_as_mappable
@@ -19,12 +22,15 @@ module Geokit
       end
     EOS
   end
-end
 
-path = File.expand_path(File.dirname(__FILE__))
-$:.unshift path unless $:.include?(path)
-require 'geokit/geocoders'
-require 'geokit/mappable'
+  autoload :Inflector, 'geokit/geocoders'
+  autoload :Geocoders, 'geokit/geocoders'
+
+  autoload :Bounds,   'geokit/bounds'
+  autoload :GeoLoc,   'geokit/geoloc'
+  autoload :LatLng,   'geokit/latlng'
+  autoload :Mappable, 'geokit/mappable'
+end
 
 # make old-style module name "GeoKit" equivalent to new-style "Geokit"
 GeoKit=Geokit
