@@ -221,6 +221,27 @@ module Geokit
         [start] + headings.map { |v| v[0] }
       end
     
+      # TODO: Refactor this and midpoint_of so that this can take more than three args
+      def area(a, b, c = nil, options = {})
+        return 0 unless c # Not strictly true (see lunes), but tough luck
+
+        # Use headings so that the sides determining angles are great circles
+        ab, ac = heading_between(a, b), heading_between(a, c)
+        ba, bc = heading_between(b, a), heading_between(b, c)
+        ca, cb = heading_between(c, a), heading_between(c, b)
+        angles = [ab - ac, ba - bc, ca - cb]
+
+        total = angles.inject(0) do |sum, angle|
+          angle = 360 - angle if angle > 180
+          sum + angle.abs / 180 * Math::PI
+        end
+
+        spherical_excess = total - Math::PI
+        radius = units_sphere_multiplier(options[:units])
+
+        spherical_excess * radius * radius
+      end
+
       protected
     
       def deg2rad(degrees)
@@ -290,26 +311,6 @@ module Geokit
         else
           !(ac_heading < ab_heading && ac_heading > reverse_ab_heading)
         end
-      end
-
-      # TODO: Refactor this and midpoint_of so that this can take more than three args
-      def area(a, b = nil, c = nil, options = {})
-        return 0 unless b && c
-        radius = units_sphere_multiplier(options[:units])
-
-        ab = heading_between(a, b)
-        ac = heading_between(a, c)
-        bc = heading_between(b, c)
-        ba = (ab + 180) % 360
-        ca = (ac = 180) % 360
-        cb = (bc = 180) % 360
-
-        a = (ab - ac).abs / 180 * Math::PI
-        b = (ba - bc).abs / 180 * Math::PI
-        c = (ca - cb).abs / 180 * Math::PI
-
-        excess = a + b + c - Math::PI
-        excess * (radius ** 2)
       end
 
       # TODO: Refactor this and midpoint_of so that this can take more than three args

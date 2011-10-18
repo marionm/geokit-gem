@@ -59,13 +59,28 @@ class TestPolygonClockwise < Test::Unit::TestCase
 end
 
 class TestMidpointOf < Test::Unit::TestCase
+  def test_something
 
+  end
 end
 
 class TestCentroid < Test::Unit::TestCase
+  def test_something
 
+  end
 end
 
+# TODO: Some better tests would be nice
 class TestArea < Test::Unit::TestCase
+  def test_greater_but_close_to_planar_approx
+    a = [0, 0]
+    b = [10, 0]
+    c = [0, 10]
 
+    approx = ((10 * Geokit::Mappable::MILES_PER_LATITUDE_DEGREE) ** 2) / 2
+    actual = Geokit::LatLng.area a, b, c
+
+    assert approx < actual
+    assert_in_delta approx, actual, 3000
+  end
 end
