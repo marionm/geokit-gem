@@ -272,7 +272,6 @@ module Geokit
         max
       end
 
-      # Return the southern-most point from the list. Ties are won by a lower array index.
       def southernnmost(locations)
         min = locations.first
         locations[1..-1].each do |location|

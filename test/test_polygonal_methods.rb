@@ -35,3 +35,37 @@ class PolygonalMethodsTest < Test::Unit::TestCase
     assert_equal expected, hull
   end
 end
+
+class TestPolygonClockwise < Test::Unit::TestCase
+  def setup
+
+  end
+
+  def test_clockwise_with_western_start
+    
+  end
+
+  def test_clockwise_with_eastern_start
+
+  end
+
+  def test_clockwise_with_straight_north_start
+
+  end
+
+  def test_clockwise_with_straight_south_start
+
+  end
+end
+
+class TestMidpointOf < Test::Unit::TestCase
+
+end
+
+class TestCentroid < Test::Unit::TestCase
+
+end
+
+class TestArea < Test::Unit::TestCase
+
+end
