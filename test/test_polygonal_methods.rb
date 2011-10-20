@@ -86,6 +86,21 @@ class TestArea < Test::Unit::TestCase
     actual = Geokit::LatLng.area a, b, c
 
     assert approx < actual
-    assert_in_delta approx, actual, 3000
+    assert_in_delta approx, actual, 1800
+  end
+
+  def test_misleading_headings
+    #The heading difference between b to a and b to c is ~296, which is not the angle at b
+    a = [5, 0]
+    b = [-3, 0]
+    c = [-2, -2]
+
+
+    lat_miles = Geokit::Mappable::MILES_PER_LATITUDE_DEGREE
+    approx = 8 * lat_miles * 2 * lat_miles / 2
+    actual = Geokit::LatLng.area a, b, c
+
+    assert approx < actual
+    assert_in_delta approx, actual, 101
   end
 end

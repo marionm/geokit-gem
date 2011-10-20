@@ -231,11 +231,11 @@ module Geokit
         ab, ac = heading_between(a, b), heading_between(a, c)
         ba, bc = heading_between(b, a), heading_between(b, c)
         ca, cb = heading_between(c, a), heading_between(c, b)
-        angles = [ab - ac, ba - bc, ca - cb]
+        angles = [(ab - ac).abs, (ba - bc).abs, (ca - cb).abs]
 
         total = angles.inject(0) do |sum, angle|
           angle = 360 - angle if angle > 180
-          sum + angle.abs / 180 * Math::PI
+          sum + angle / 180 * Math::PI
         end
 
         spherical_excess = total - Math::PI
