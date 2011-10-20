@@ -37,24 +37,25 @@ class PolygonalMethodsTest < Test::Unit::TestCase
 end
 
 class TestPolygonClockwise < Test::Unit::TestCase
-  def setup
-
+  def test_clockwise
+    [
+      [[0, 0], [0, 1], [-1, -2]], [[0, 0], [0, 1], [-1, 0]], [[0, 0], [0, 1], [-1, 1]], [[0, 0], [0, 1], [-1, 2]],
+      [[0, 0], [0, -1], [1, -2]], [[0, 0], [0, -1], [1, -1]], [[0, 0], [0, -1], [1, 0]], [[0, 0], [0, -1], [1, 1]],
+      [[30, 54], [67, 54], [-20, 55]], [[40, 10], [10, 10], [30, 0]], [[40, 50], [60, 20], [64, 30]]
+    ].each do |points|
+      assert Geokit::LatLng.send(:clockwise?, *points.map { |p| Geokit::LatLng.new(*p) })
+    end
   end
 
-  def test_clockwise_with_western_start
-    
-  end
-
-  def test_clockwise_with_eastern_start
-
-  end
-
-  def test_clockwise_with_straight_north_start
-
-  end
-
-  def test_clockwise_with_straight_south_start
-
+  def test_counter_clockwise
+    [
+      [[0, 0], [0, 1], [1, -2]], [[0, 0], [0, 1], [1, 0]], [[0, 0], [0, 1], [1, 1]], [[0, 0], [0, 1], [1, 2]],
+      [[0, 0], [0, -1], [-1, -2]], [[0, 0], [0, -1], [-1, -1]], [[0, 0], [0, -1], [-1, 0]], [[0, 0], [0, -1], [-1, 1]],
+      [[30, 54], [67, 54], [-20, 52]], [[40, 10], [10, 10], [30, 85]],
+      [[40, 50], [60, 20], [60, 10]]
+    ].each do |points|
+      assert !Geokit::LatLng.send(:clockwise?, *points.map { |p| Geokit::LatLng.new(*p) })
+    end
   end
 end
 
