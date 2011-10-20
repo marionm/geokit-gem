@@ -334,16 +334,21 @@ module Geokit
         LatLng.new(*to_polar(x / l, y / l, z / l))
       end
 
-      # Note that the radius matters, since values are evenutally used to move a
-      # cartesian centroid out to the surface of the earth.
       def to_polar(x, y, z, options = {})
         radius = units_sphere_multiplier(options[:units])
 
         t = Math.acos(z / radius)
-        o = Math.acos(x / radius / Math.sin(t))
+        lat = -1 * ((t * 180 / Math::PI) - 90)
 
-        lat = t * 180 / Math::PI
-        lng = o * 180 / Math::PI
+        yx = y / x.to_f
+        lng = if yx.nan?
+          0
+        else
+          p = Math.atan(yx)
+          l = p * 180 / Math::PI
+          l += 180 if x < 0
+          l
+        end
 
         [lat, lng]
       end
@@ -360,17 +365,16 @@ module Geokit
       nil
     end
 
-    # Note that the radius matters, since values are evenutally used to move a
-    # cartesian centroid out to the surface of the earth.
+    # +X = 'towards', +Y = 'east', +Z = 'north', with latlng(0,0) being all 'towards'
     def to_cartesian(options = {})
       radius = self.class.send(:units_sphere_multiplier, options[:units])
 
-      t = lat * Math::PI / 180
-      o = lng * Math::PI / 180
+      t = (90 - lat) * Math::PI / 180
+      p = lng * Math::PI / 180
 
       sin_t = Math.sin(t)
-      x = radius * sin_t * Math.cos(o)
-      y = radius * sin_t * Math.sin(o)
+      x = radius * sin_t * Math.cos(p)
+      y = radius * sin_t * Math.sin(p)
       z = radius * Math.cos(t)
 
       [x, y, z]
