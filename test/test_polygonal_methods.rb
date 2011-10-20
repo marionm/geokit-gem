@@ -65,8 +65,12 @@ class TestMidpointOf < Test::Unit::TestCase
 end
 
 class TestCentroid < Test::Unit::TestCase
-  def test_something
+  def test_centroid
 
+  end
+
+  def test_triangle_centroid
+    #TODO: Write some tests
   end
 end
 

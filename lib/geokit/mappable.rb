@@ -118,21 +118,20 @@ module Geokit
         midpoint=from.endpoint(heading,distance/2,options)
       end
   
-      # Returns the midpoint of a list of points, as a LatLng
+      # Returns the centroid of a list of points, as a LatLng
       # Won't really deal with map edge cases, so be careful.
-      def midpoint_of(locations, options = {})
+      # TODO: Verify and test/cleanup
+      def centroid(locations, options = {})
         case locations.length
           when 1 then return locations.first
-          when 2 then return midpoint_between(*locations)
-          when 3 then return centroid(*locations)
+          when 2 then return midpoint_between(locations.first, locations.last, options)
+          when 3 then return triangle_centroid(locations[0], locations[1], locations[2], options)
         end
 
         hull_method = options[:method] || :convex_hull
-        hull = send(:method, locations)
+        hull = send(hull_method, locations)
 
-        top = northernmost(locations)
-        bottom = southernmost(locations)
-        anchor = midpoint_between(top, bottom) #Fairly arbitrary choice
+        anchor = LatLng.new(90, 0) # Fairly arbitrary choice
 
         # For each concecutive pair of verticies in the hull, find the area and
         # centroid of each triangle formed by the pair and the anchor, as well
@@ -144,14 +143,17 @@ module Geokit
           area = area(anchor, b, c)
           total_area += area
           areas << area
-          centroids << centroid(anchor, b, c)
+          centroids << triangle_centroid(anchor, b, c, options)
           clockwise << clockwise?(anchor, b, c)
         end
 
-        # Fun fact: The area os the polygon described by the locations is equal
+        # Fun fact: The area of the polygon described by the locations is equal
         # to the sum of the clockwise-weighted triange areas from above.
+        # TODO: Use this to fix up the area method
 
-        # FIXME: Is this right? How to weight things negatively correctly?
+        # Take the area weighted sum of the centroids, with a negative weight
+        # being applied to counter-clockwise trianges (which means its area
+        # is entirely outside the polyogon)
         latitude = 0
         longitude = 0
         centroids.each_with_index do |centroid, i|
@@ -221,7 +223,7 @@ module Geokit
         [start] + headings.map { |v| v[0] }
       end
     
-      # TODO: Refactor this and midpoint_of so that this can take more than three args
+      # TODO: Refactor this so it can take more than three args
       def area(a, b, c = nil, options = {})
         return 0 unless c # Not strictly true (see lunes), but tough luck
 
@@ -313,25 +315,25 @@ module Geokit
         end
       end
 
-      # TODO: Refactor this and midpoint_of so that this can take more than three args
-      def centroid(a, b = nil, c = nil, options = {})
-        if b.nil?
-          return a
-        elsif c.nil?
-          return midpoint_between(a, b)
-        end
+      def triangle_centroid(a, b, c, options = {})
+        radius = units_sphere_multiplier(options[:units])
 
         a = a.to_cartesian
         b = b.to_cartesian
         c = c.to_cartesian
 
+        # Get the non-spherical centroid
         x = (a[0] + b[0] + c[0]) / 3
         y = (a[1] + b[1] + c[1]) / 3
         z = (a[2] + b[2] + c[2]) / 3
 
-        l = ((x ** 2) + (y ** 2) + (z ** 2)) ** 0.5
+        # Normalize then multiply by the radius to move the point to the surface
+        len = ((x ** 2) + (y ** 2) + (z ** 2)) ** 0.5
+        x = x / len * radius
+        y = y / len * radius
+        z = z / len * radius
 
-        LatLng.new(*to_polar(x / l, y / l, z / l))
+        LatLng.new(*to_polar(x, y, z))
       end
 
       def to_polar(x, y, z, options = {})
