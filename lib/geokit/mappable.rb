@@ -118,12 +118,6 @@ module Geokit
         midpoint=from.endpoint(heading,distance/2,options)
       end
   
-      # Returns a simple average of locations
-      # FIXME: Is this as simple as it sounds (excluding edge cases)? Or is it spherical?
-      def average(locations)
-
-      end
-
       # Returns the centroid of a list of points, as a LatLng
       # Implementation of the algorithm described here:
       # http://www.jennessent.com/arcgis/shapes_poster.htm
@@ -310,15 +304,6 @@ module Geokit
           max = location if location.lat > max.lat
         end
         max
-      end
-
-      # Return the southern-most point from the list. Ties are won by a lower array index.
-      def southernnmost(locations)
-        min = locations.first
-        locations[1..-1].each do |location|
-          min = location if location.lat < min.lat
-        end
-        min
       end
 
       def clockwise?(a, b, c)
