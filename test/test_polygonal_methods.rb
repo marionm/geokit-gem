@@ -141,7 +141,7 @@ class TestCentroid < Test::Unit::TestCase
     actual = Geokit::LatLng.centroid(points, :method => :convex_hull)
 
     assert_in_delta expected.lat, actual.lat, 0.005
-    assert_in_delta expected.lng, actual.lng, 0.00005
+    assert_in_delta expected.lng, actual.lng, 0.0005
   end
 end
 
@@ -152,7 +152,7 @@ class TestArea < Test::Unit::TestCase
     c = [0, 10]
 
     approx = ((10 * Geokit::Mappable::MILES_PER_LATITUDE_DEGREE) ** 2) / 2
-    actual = Geokit::LatLng.area a, b, c
+    actual = Geokit::LatLng.area([a, b, c])
 
     assert approx < actual
     assert_in_delta approx, actual, 1800
@@ -164,10 +164,9 @@ class TestArea < Test::Unit::TestCase
     b = [-3, 0]
     c = [-2, -2]
 
-
     lat_miles = Geokit::Mappable::MILES_PER_LATITUDE_DEGREE
     approx = 8 * lat_miles * 2 * lat_miles / 2
-    actual = Geokit::LatLng.area a, b, c
+    actual = Geokit::LatLng.area([a, b, c])
 
     assert approx < actual
     assert_in_delta approx, actual, 101

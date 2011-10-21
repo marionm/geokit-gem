@@ -128,41 +128,7 @@ module Geokit
           when 3 then return triangle_centroid(locations[0], locations[1], locations[2], options)
         end
 
-        # Can be :convex_hull or :polygon (be wary of the polygon method - see fixme below)
-        polygon_method = options[:method] || :convex_hull
-        polygon = send(polygon_method, locations)
-
-        # This anchor point can actually be anywhere on the sphere but somewhere
-        # in this implementation (or the implementation of the helpers), some
-        # bug or presicion error is getting introduced over long distances that
-        # results in the centroid being up to ~2 degrees off the mark. So, pick
-        # an anchor inside or close to inside the polygon to minimize the error.
-        # TODO: Find the bug described above
-        # FIXME: This tries to be smart and works for convex hulls, but can pick
-        #        a point that causes large inaccuracies for for non-convex
-        #        polygons quite easily
-        n = northernmost(polygon)
-        i = polygon.index(n)
-        mid = polygon[i - 1].midpoint_to(polygon[(i + 1) % polygon.length])
-        anchor = n.endpoint(n.heading_to(mid), 1)
-
-        # For each concecutive pair of verticies in the polygon, find the area
-        # and centroid of each triangle formed by the pair and the anchor, and
-        # the counter-clockwise or clockwise direction of the verticies.
-        total_area = 0
-        areas, centroids, clockwise = [], [], []
-        polygon << polygon.first
-        polygon.each_cons(2) do |b, c|
-          area = area(anchor, b, c)
-          areas << area
-          total_area += area
-          centroids << triangle_centroid(anchor, b, c, options)
-          clockwise << clockwise?(anchor, b, c)
-        end
-
-        # Fun fact: The area of the polygon described by the locations is equal
-        # to the sum of the clockwise-weighted triange areas from above.
-        # TODO: Use this fact to fix up the area method
+        areas, total_area, centroids, clockwise = centroid_area_helper(locations, :all, options)
 
         # Take the area weighted sum of the centroids, with a negative weight
         # being applied to counter-clockwise trianges (which means its area is
@@ -234,25 +200,33 @@ module Geokit
         [start] + headings.map { |v| v[0] }
       end
     
-      # TODO: Refactor this so it can take more than three args
-      def area(a, b, c = nil, options = {})
-        return 0 unless c # Not strictly true (see lunes), but tough luck
+      def area(locations, options = {})
+        if locations.length < 3
+          # Not strictly true (see lunes), but tough luck
+          0
 
-        # Use headings so that the sides determining angles are great circles
-        ab, ac = heading_between(a, b), heading_between(a, c)
-        ba, bc = heading_between(b, a), heading_between(b, c)
-        ca, cb = heading_between(c, a), heading_between(c, b)
-        angles = [(ab - ac).abs, (ba - bc).abs, (ca - cb).abs]
+        elsif locations.length == 3
+          a, b, c = *locations
 
-        total = angles.inject(0) do |sum, angle|
-          angle = 360 - angle if angle > 180
-          sum + angle / 180 * Math::PI
+          # Use headings so that the sides determining angles are great circles
+          ab, ac = heading_between(a, b), heading_between(a, c)
+          ba, bc = heading_between(b, a), heading_between(b, c)
+          ca, cb = heading_between(c, a), heading_between(c, b)
+          angles = [(ab - ac).abs, (ba - bc).abs, (ca - cb).abs]
+
+          total = angles.inject(0) do |sum, angle|
+            angle = 360 - angle if angle > 180
+            sum + angle / 180 * Math::PI
+          end
+
+          spherical_excess = total - Math::PI
+          radius = units_sphere_multiplier(options[:units])
+
+          spherical_excess * radius * radius
+
+        else
+          centroid_area_helper(locations, :area, options)
         end
-
-        spherical_excess = total - Math::PI
-        radius = units_sphere_multiplier(options[:units])
-
-        spherical_excess * radius * radius
       end
 
       protected
@@ -355,6 +329,55 @@ module Geokit
         end
 
         [lat, lng]
+      end
+
+      # The calculations for the area of and the centroid of a set of points
+      # larger than three are identical up to a point. That logic resides here,
+      # with a parameter for which set of data is returned. Sort of messy, but
+      # it keeps other things cleaner.
+      def centroid_area_helper(locations, ret_value, options = {})
+        # Can be :convex_hull or :polygon (be wary of the polygon method - see fixme below)
+        polygon_method = options[:method] || :convex_hull
+        polygon = send(polygon_method, locations)
+
+        # This anchor point can actually be anywhere on the sphere but somewhere
+        # in this implementation (or the implementation of the helpers), some
+        # bug or presicion error is getting introduced over long distances that
+        # results in the centroid being up to ~2 degrees off the mark. So, pick
+        # an anchor inside or close to inside the polygon to minimize the error.
+        # TODO: Find the bug described above
+        # FIXME: This tries to be smart and works for convex hulls, but can pick
+        #        a point that causes large inaccuracies for for non-convex
+        #        polygons quite easily
+        n = northernmost(polygon)
+        i = polygon.index(n)
+        mid = polygon[i - 1].midpoint_to(polygon[(i + 1) % polygon.length])
+        anchor = n.endpoint(n.heading_to(mid), 1)
+
+        # For each concecutive pair of verticies in the polygon, find the area
+        # and centroid of each triangle formed by the pair and the anchor, and
+        # the counter-clockwise or clockwise direction of the verticies.
+        total_area, total_weighted_area = 0, 0
+        areas, centroids, clockwise = [], [], []
+        polygon << polygon.first
+        polygon.each_cons(2) do |b, c|
+          area = area([anchor, b, c])
+          areas << area
+          total_area += area
+
+          cw = clockwise?(anchor, b, c)
+          area *= -1 unless cw
+          total_weighted_area += area
+          clockwise << cw
+
+          centroids << triangle_centroid(anchor, b, c, options)
+        end
+
+        if ret_value == :area
+          total_weighted_area
+        else
+          [areas, total_area, centroids, clockwise]
+        end
       end
     end
   
