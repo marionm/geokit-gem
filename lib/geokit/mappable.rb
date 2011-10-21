@@ -118,9 +118,15 @@ module Geokit
         midpoint=from.endpoint(heading,distance/2,options)
       end
   
+      # Returns a simple average of locations
+      # FIXME: Is this as simple as it sounds (excluding edge cases)? Or is it spherical?
+      def average(locations)
+
+      end
+
       # Returns the centroid of a list of points, as a LatLng
-      # Won't really deal with map edge cases, so be careful.
-      # TODO: Verify and test/cleanup
+      # Implementation of the algorithm described here:
+      # http://www.jennessent.com/arcgis/shapes_poster.htm
       def centroid(locations, options = {})
         case locations.length
           when 1 then return locations.first
@@ -128,32 +134,45 @@ module Geokit
           when 3 then return triangle_centroid(locations[0], locations[1], locations[2], options)
         end
 
-        hull_method = options[:method] || :convex_hull
-        hull = send(hull_method, locations)
+        # Can be :convex_hull or :polygon (be wary of the polygon method - see fixme below)
+        polygon_method = options[:method] || :convex_hull
+        polygon = send(polygon_method, locations)
 
-        anchor = LatLng.new(90, 0) # Fairly arbitrary choice
+        # This anchor point can actually be anywhere on the sphere but somewhere
+        # in this implementation (or the implementation of the helpers), some
+        # bug or presicion error is getting introduced over long distances that
+        # results in the centroid being up to ~2 degrees off the mark. So, pick
+        # an anchor inside or close to inside the polygon to minimize the error.
+        # TODO: Find the bug described above
+        # FIXME: This tries to be smart and works for convex hulls, but can pick
+        #        a point that causes large inaccuracies for for non-convex
+        #        polygons quite easily
+        n = northernmost(polygon)
+        i = polygon.index(n)
+        mid = polygon[i - 1].midpoint_to(polygon[(i + 1) % polygon.length])
+        anchor = n.endpoint(n.heading_to(mid), 1)
 
-        # For each concecutive pair of verticies in the hull, find the area and
-        # centroid of each triangle formed by the pair and the anchor, as well
-        # as the counter-clockwise or clockwise direction of the verticies.
+        # For each concecutive pair of verticies in the polygon, find the area
+        # and centroid of each triangle formed by the pair and the anchor, and
+        # the counter-clockwise or clockwise direction of the verticies.
         total_area = 0
         areas, centroids, clockwise = [], [], []
-        hull << hull.first
-        hull.each_cons(2) do |b, c|
+        polygon << polygon.first
+        polygon.each_cons(2) do |b, c|
           area = area(anchor, b, c)
-          total_area += area
           areas << area
+          total_area += area
           centroids << triangle_centroid(anchor, b, c, options)
           clockwise << clockwise?(anchor, b, c)
         end
 
         # Fun fact: The area of the polygon described by the locations is equal
         # to the sum of the clockwise-weighted triange areas from above.
-        # TODO: Use this to fix up the area method
+        # TODO: Use this fact to fix up the area method
 
         # Take the area weighted sum of the centroids, with a negative weight
-        # being applied to counter-clockwise trianges (which means its area
-        # is entirely outside the polyogon)
+        # being applied to counter-clockwise trianges (which means its area is
+        # entirely outside the polyogon)
         latitude = 0
         longitude = 0
         centroids.each_with_index do |centroid, i|
@@ -176,7 +195,6 @@ module Geokit
       # Returns a clockwise-ordered subset of the locations that form a convex hull.
       # The algorithm is similar in concept to the polygon method's, but the heading
       # sorting logic is done for each added node rather than just the start point.
-      # Won't really deal with map edge cases, so be careful.
       def convex_hull(locations)
         locations = locations.dup
         start = locations.delete(northernmost(locations))
@@ -211,7 +229,6 @@ module Geokit
       end
 
       # Returns a clockwise ordering of the locations that will form a polygon.
-      # Won't really deal with map edge cases, so be careful.
       def polygon(locations)
         locations = locations.dup
         start = locations.delete(northernmost(locations))

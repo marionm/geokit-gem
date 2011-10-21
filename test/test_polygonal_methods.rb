@@ -59,23 +59,92 @@ class TestPolygonClockwise < Test::Unit::TestCase
   end
 end
 
-class TestMidpointOf < Test::Unit::TestCase
-  def test_something
-
-  end
-end
-
 class TestCentroid < Test::Unit::TestCase
-  def test_centroid
-
+  def test_centroid_of_one_point
+    point = Geokit::LatLng.new(65, 43)
+    assert_equal point, Geokit::LatLng.centroid([point])
   end
 
-  def test_triangle_centroid
-    #TODO: Write some tests
+  def test_centroid_of_two_points
+    points = [
+      a = Geokit::LatLng.new(65, 43),
+      b = Geokit::LatLng.new(31, -18)
+    ]
+    midpoint = Geokit::LatLng.midpoint_between(a, b)
+    actual = Geokit::LatLng.centroid(points)
+
+    assert_in_delta midpoint.lat, actual.lat, 0.000005
+    assert_in_delta midpoint.lng, actual.lng, 0.000005
+  end
+
+  # TODO: More tests would be nice
+  def test_centroid_of_three_points
+    points = [
+      Geokit::LatLng.new(0, -45),
+      Geokit::LatLng.new(0, 45),
+      Geokit::LatLng.new(90, 0)
+    ]
+    expected = Geokit::LatLng.new(35.26438, 0)
+    actual = Geokit::LatLng.centroid(points)
+    assert_in_delta expected.lat, actual.lat, 0.00005
+    assert_in_delta expected.lng, actual.lng, 0.00005
+
+    points = [
+      Geokit::LatLng.new(0, -45),
+      Geokit::LatLng.new(0, 45),
+      Geokit::LatLng.new(-90, 0)
+    ]
+    expected = Geokit::LatLng.new(-35.26438, 0)
+    actual = Geokit::LatLng.centroid(points)
+    assert_in_delta expected.lat, actual.lat, 0.00005
+    assert_in_delta expected.lng, actual.lng, 0.00005
+  end
+
+  def test_centroid_of_x_points_as_polygon
+    points = [
+      Geokit::LatLng.new(0, -45),
+      Geokit::LatLng.new(0, 45),
+      Geokit::LatLng.new(89, 1),
+      Geokit::LatLng.new(89, -1)
+    ]
+    expected = Geokit::LatLng.new(34.9, 0)
+    actual = Geokit::LatLng.centroid(points, :method => :polygon)
+    assert_in_delta expected.lat, actual.lat, 0.05
+    assert_in_delta expected.lng, actual.lng, 0.0005
+
+    points = [
+      Geokit::LatLng.new(0, -2),
+      Geokit::LatLng.new(-1, 0),
+      Geokit::LatLng.new(0, 2),
+      Geokit::LatLng.new(-2, 2),
+      Geokit::LatLng.new(-3, 0),
+      Geokit::LatLng.new(-2, -2)
+    ]
+    expected = Geokit::LatLng.new(-1.3335, 0)
+    actual = Geokit::LatLng.centroid(points, :method => :polygon)
+    assert_in_delta expected.lat, actual.lat, 0.005
+    #FIXME: This test correctly fails - there is a bug in anchor selections for the polygon mehod
+    assert_in_delta expected.lng, actual.lng, 0.005
+  end
+
+  def test_centroid_of_x_points_as_convex_hull
+    points = [
+      Geokit::LatLng.new(0, -2),
+      Geokit::LatLng.new(-1, 0),
+      Geokit::LatLng.new(0, 2),
+      Geokit::LatLng.new(-2, 2),
+      Geokit::LatLng.new(-3, 0),
+      Geokit::LatLng.new(-2, -2)
+    ]
+
+    expected = Geokit::LatLng.new(-1.2668, 0)
+    actual = Geokit::LatLng.centroid(points, :method => :convex_hull)
+
+    assert_in_delta expected.lat, actual.lat, 0.005
+    assert_in_delta expected.lng, actual.lng, 0.00005
   end
 end
 
-# TODO: Some better tests would be nice
 class TestArea < Test::Unit::TestCase
   def test_greater_but_close_to_planar_approx
     a = [0, 0]
