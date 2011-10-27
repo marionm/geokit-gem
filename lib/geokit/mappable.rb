@@ -229,7 +229,8 @@ module Geokit
         end
       end
 
-      def to_polar(x, y, z, options = {})
+      def to_polar(cartesian_coords, options = {})
+        x, y, z = *cartesian_coords
         radius = units_sphere_multiplier(options[:units])
 
         t = Math.acos(z / radius)
@@ -328,7 +329,7 @@ module Geokit
         y = y / len * radius
         z = z / len * radius
 
-        LatLng.new(*to_polar(x, y, z))
+        LatLng.new(*to_polar([x, y, z]))
       end
 
       # The calculations for the area of and the centroid of a set of points

@@ -31,7 +31,7 @@ class TestCoordinateConversions < Test::Unit::TestCase
       [radius * Math.sin(Math::PI * 0.25), 0, radius * Math.sin(Math::PI * 0.25)] => [45, 0],
       [-radius * Math.sin(Math::PI * 0.25), radius * Math.sin(Math::PI * 0.25), 0] => [0, 135]
     }.each do |input, expected|
-      actual = Geokit::LatLng.send(:to_polar, *input)
+      actual = Geokit::LatLng.send(:to_polar, input)
       assert_in_delta expected.first, actual.first, 0.00000005
       assert_in_delta expected.last,  actual.last,  0.00000005
     end
