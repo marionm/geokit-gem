@@ -2,7 +2,7 @@ path = File.expand_path(File.dirname(__FILE__))
 $:.unshift path unless $:.include?(path)
 
 module Geokit
-  VERSION = '1.6.1'
+  VERSION = '1.6.2'
   # These defaults are used in Geokit::Mappable.distance_to and in acts_as_mappable
   @@default_units = :miles
   @@default_formula = :sphere
