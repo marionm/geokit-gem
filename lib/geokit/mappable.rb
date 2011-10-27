@@ -229,6 +229,25 @@ module Geokit
         end
       end
 
+      def to_polar(x, y, z, options = {})
+        radius = units_sphere_multiplier(options[:units])
+
+        t = Math.acos(z / radius)
+        lat = -1 * ((t * 180 / Math::PI) - 90)
+
+        yx = y / x.to_f
+        lng = if yx.nan?
+          0
+        else
+          p = Math.atan(yx)
+          l = p * 180 / Math::PI
+          l += 180 if x < 0
+          l
+        end
+
+        [lat, lng]
+      end
+
       protected
     
       def deg2rad(degrees)
@@ -310,25 +329,6 @@ module Geokit
         z = z / len * radius
 
         LatLng.new(*to_polar(x, y, z))
-      end
-
-      def to_polar(x, y, z, options = {})
-        radius = units_sphere_multiplier(options[:units])
-
-        t = Math.acos(z / radius)
-        lat = -1 * ((t * 180 / Math::PI) - 90)
-
-        yx = y / x.to_f
-        lng = if yx.nan?
-          0
-        else
-          p = Math.atan(yx)
-          l = p * 180 / Math::PI
-          l += 180 if x < 0
-          l
-        end
-
-        [lat, lng]
       end
 
       # The calculations for the area of and the centroid of a set of points
